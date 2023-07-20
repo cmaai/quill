@@ -1,6 +1,6 @@
 {
   "name": "quill",
-  "version": "2.0.0-dev.3",
+  "version": "2.0.0-dev.31",
   "description": "Your powerful, rich text editor",
   "author": "Jason Chen <jhchen7@gmail.com>",
   "homepage": "http://quilljs.com",
@@ -42,6 +42,7 @@
   "devDependencies": {
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.5",
+    "@typescript-eslint/eslint-plugin": "^6.1.0",
     "babel-loader": "^8.1.0",
     "babel-plugin-istanbul": "^6.0.0",
     "css-loader": "^3.5.1",

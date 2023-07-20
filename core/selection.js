@@ -72,21 +72,33 @@ class Selection {
       this.scroll.batchStart();
     });
     this.root.addEventListener('compositionend', () => {
-      this.scroll.batchEnd();
-      this.composing = false;
-      if (this.cursor.parent) {
-        const range = this.cursor.restore();
-        if (!range) return;
-        setTimeout(() => {
-          this.setNativeRange(
-            range.startNode,
-            range.startOffset,
-            range.endNode,
-            range.endOffset,
-          );
-        }, 1);
-      }
+      setTimeout(() => {
+        this.scroll.batchEnd();
+        this.composing = false;
+        if (this.cursor.parent) {
+          const range = this.cursor.restore();
+          if (!range) return;
+          setTimeout(() => {
+            this.setNativeRange(
+              range.startNode,
+              range.startOffset,
+              range.endNode,
+              range.endOffset,
+            );
+          }, 1);
+        }
+      }, 0);
     });
+    this.root.addEventListener('compositionupdate',
+      (data) => {
+        // 匹配除中文、字母、数字外的特殊字符，合成输入法的特殊字符不走 batch 更新
+        const reg = /[^\u4e00-\u9fa5a-zA-Z\d]+/;
+        if (reg.exec(data.data)) {
+          this.composing = false;
+          return;
+        }
+      },
+    );
   }
 
   handleDragging() {
