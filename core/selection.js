@@ -7,14 +7,14 @@ import logger from './logger';
 const debug = logger('quill:selection');
 
 class Range {
-  constructor(index, length = 0) {
+  constructor (index, length = 0) {
     this.index = index;
     this.length = length;
   }
 }
 
 class Selection {
-  constructor(scroll, emitter) {
+  constructor (scroll, emitter) {
     this.emitter = emitter;
     this.scroll = scroll;
     this.composing = false;
@@ -69,6 +69,7 @@ class Selection {
   handleComposition() {
     this.root.addEventListener('compositionstart', () => {
       this.composing = true;
+      this.root.setAttribute('data-placeholder', '');
       this.scroll.batchStart();
     });
     this.root.addEventListener('compositionend', () => {
