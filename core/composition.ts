@@ -39,7 +39,9 @@ class Composition {
 
   private handleCompositionEnd(event: CompositionEvent) {
     this.emitter.emit(Emitter.events.COMPOSITION_BEFORE_END, event);
-    this.scroll.batchEnd();
+    setTimeout(() => {
+      this.scroll.batchEnd();
+    }, 0);
     this.emitter.emit(Emitter.events.COMPOSITION_END, event);
     this.isComposing = false;
   }
