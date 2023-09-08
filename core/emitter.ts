@@ -5,9 +5,9 @@ import logger from './logger';
 const debug = logger('quill:events');
 const EVENTS = ['selectionchange', 'mousedown', 'mouseup', 'click'];
 
-EVENTS.forEach(eventName => {
+EVENTS.forEach((eventName) => {
   document.addEventListener(eventName, (...args) => {
-    Array.from(document.querySelectorAll('.ql-container')).forEach(node => {
+    Array.from(document.querySelectorAll('.ql-container')).forEach((node) => {
       const quill = instances.get(node);
       if (quill && quill.emitter) {
         quill.emitter.handleDOM(...args);
@@ -54,15 +54,15 @@ class Emitter extends EventEmitter<string> {
     return super.emit(...args);
   }
 
-  handleDOM(event, ...args: unknown[]) {
+  handleDOM(event: Event, ...args: unknown[]) {
     (this.listeners[event.type] || []).forEach(({ node, handler }) => {
-      if (event.target === node || node.contains(event.target)) {
+      if (event.target === node || node.contains(event.target as Node)) {
         handler(event, ...args);
       }
     });
   }
 
-  listenDOM(eventName: string, node, handler) {
+  listenDOM(eventName: string, node: Node, handler: EventListener) {
     if (!this.listeners[eventName]) {
       this.listeners[eventName] = [];
     }
@@ -71,6 +71,6 @@ class Emitter extends EventEmitter<string> {
 }
 
 export type EmitterSource =
-  typeof Emitter.sources[keyof typeof Emitter.sources];
+  (typeof Emitter.sources)[keyof typeof Emitter.sources];
 
 export default Emitter;

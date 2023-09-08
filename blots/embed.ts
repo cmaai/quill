@@ -1,18 +1,26 @@
+import type { ScrollBlot } from 'parchment';
 import { EmbedBlot } from 'parchment';
 import TextBlot from './text';
 
 const GUARD_TEXT = '\uFEFF';
+
+export interface EmbedContextRange {
+  startNode: Node | Text;
+  startOffset: number;
+  endNode?: Node | Text;
+  endOffset?: number;
+}
 
 class Embed extends EmbedBlot {
   contentNode: HTMLSpanElement;
   leftGuard: Text;
   rightGuard: Text;
 
-  constructor(scroll, node) {
+  constructor(scroll: ScrollBlot, node: Node) {
     super(scroll, node);
     this.contentNode = document.createElement('span');
     this.contentNode.setAttribute('contenteditable', 'false');
-    Array.from(this.domNode.childNodes).forEach(childNode => {
+    Array.from(this.domNode.childNodes).forEach((childNode) => {
       this.contentNode.appendChild(childNode);
     });
     this.leftGuard = document.createTextNode(GUARD_TEXT);
@@ -22,15 +30,15 @@ class Embed extends EmbedBlot {
     this.domNode.appendChild(this.rightGuard);
   }
 
-  index(node, offset) {
+  index(node: Node, offset: number) {
     if (node === this.leftGuard) return 0;
     if (node === this.rightGuard) return 1;
     return super.index(node, offset);
   }
 
-  restore(node) {
-    let range;
-    let textNode;
+  restore(node: Text): EmbedContextRange | null {
+    let range: EmbedContextRange | null = null;
+    let textNode: Text;
     const text = node.data.split(GUARD_TEXT).join('');
     if (node === this.leftGuard) {
       if (this.prev instanceof TextBlot) {
@@ -69,14 +77,14 @@ class Embed extends EmbedBlot {
     return range;
   }
 
-  update(mutations, context) {
-    mutations.forEach(mutation => {
+  update(mutations: MutationRecord[], context: Record<string, unknown>) {
+    mutations.forEach((mutation) => {
       if (
         mutation.type === 'characterData' &&
         (mutation.target === this.leftGuard ||
           mutation.target === this.rightGuard)
       ) {
-        const range = this.restore(mutation.target);
+        const range = this.restore(mutation.target as Text);
         if (range) context.range = range;
       }
     });

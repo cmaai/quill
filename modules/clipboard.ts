@@ -1,19 +1,19 @@
+import type { ScrollBlot } from 'parchment';
 import {
   Attributor,
   BlockBlot,
   ClassAttributor,
   EmbedBlot,
   Scope,
-  ScrollBlot,
   StyleAttributor,
 } from 'parchment';
 import Delta from 'quill-delta';
 import { BlockEmbed } from '../blots/block';
-import { EmitterSource } from '../core/emitter';
+import type { EmitterSource } from '../core/emitter';
 import logger from '../core/logger';
 import Module from '../core/module';
 import Quill from '../core/quill';
-import { Range } from '../core/selection';
+import type { Range } from '../core/selection';
 import { AlignAttribute, AlignStyle } from '../formats/align';
 import { BackgroundStyle } from '../formats/background';
 import CodeBlock from '../formats/code';
@@ -47,7 +47,7 @@ const CLIPBOARD_CONFIG: [Selector, Matcher][] = [
 ];
 
 const ATTRIBUTE_ATTRIBUTORS = [AlignAttribute, DirectionAttribute].reduce(
-  (memo, attr) => {
+  (memo: Record<string, Attributor>, attr) => {
     memo[attr.keyName] = attr;
     return memo;
   },
@@ -61,7 +61,7 @@ const STYLE_ATTRIBUTORS = [
   DirectionStyle,
   FontStyle,
   SizeStyle,
-].reduce((memo, attr) => {
+].reduce((memo: Record<string, Attributor>, attr) => {
   memo[attr.keyName] = attr;
   return memo;
 }, {});
@@ -77,8 +77,10 @@ class Clipboard extends Module<ClipboardOptions> {
 
   constructor(quill: Quill, options: Partial<ClipboardOptions>) {
     super(quill, options);
-    this.quill.root.addEventListener('copy', e => this.onCaptureCopy(e, false));
-    this.quill.root.addEventListener('cut', e => this.onCaptureCopy(e, true));
+    this.quill.root.addEventListener('copy', (e) =>
+      this.onCaptureCopy(e, false),
+    );
+    this.quill.root.addEventListener('cut', (e) => this.onCaptureCopy(e, true));
     this.quill.root.addEventListener('paste', this.onCapturePaste.bind(this));
     this.matchers = [];
     // @ts-expect-error Fix me later
@@ -224,7 +226,7 @@ class Clipboard extends Module<ClipboardOptions> {
   prepareMatching(container: Element, nodeMatches: WeakMap<Node, Matcher[]>) {
     const elementMatchers: Matcher[] = [];
     const textMatchers: Matcher[] = [];
-    this.matchers.forEach(pair => {
+    this.matchers.forEach((pair) => {
       const [selector, matcher] = pair;
       switch (selector) {
         case Node.TEXT_NODE:
@@ -234,7 +236,7 @@ class Clipboard extends Module<ClipboardOptions> {
           elementMatchers.push(matcher);
           break;
         default:
-          Array.from(container.querySelectorAll(selector)).forEach(node => {
+          Array.from(container.querySelectorAll(selector)).forEach((node) => {
             if (nodeMatches.has(node)) {
               const matches = nodeMatches.get(node);
               matches?.push(matcher);
@@ -348,7 +350,7 @@ function traverse(
   elementMatchers: Matcher[],
   textMatchers: Matcher[],
   nodeMatches: WeakMap<Node, Matcher[]>,
-) {
+): Delta {
   // Post-order
   if (node.nodeType === node.TEXT_NODE) {
     return textMatchers.reduce((delta: Delta, matcher) => {
@@ -389,11 +391,11 @@ function matchAttributor(node: HTMLElement, delta: Delta, scroll: ScrollBlot) {
   const attributes = Attributor.keys(node);
   const classes = ClassAttributor.keys(node);
   const styles = StyleAttributor.keys(node);
-  const formats = {};
+  const formats: Record<string, string | undefined> = {};
   attributes
     .concat(classes)
     .concat(styles)
-    .forEach(name => {
+    .forEach((name) => {
       let attr = scroll.query(name, Scope.ATTRIBUTE) as Attributor;
       if (attr != null) {
         formats[attr.attrName] = attr.value(node);
@@ -450,8 +452,9 @@ function matchBreak(node: Node, delta: Delta) {
   return delta;
 }
 
-function matchCodeBlock(node, delta, scroll) {
+function matchCodeBlock(node: Node, delta: Delta, scroll: ScrollBlot) {
   const match = scroll.query('code-block');
+  // @ts-expect-error
   const language = match ? match.formats(node, scroll) : true;
   return applyFormat(delta, 'code-block', language);
 }
@@ -550,41 +553,48 @@ function matchStyles(node: HTMLElement, delta: Delta) {
   return delta;
 }
 
-function matchTable(node, delta) {
+function matchTable(node: HTMLTableRowElement, delta: Delta) {
   const table =
-    node.parentNode.tagName === 'TABLE'
-      ? node.parentNode
-      : node.parentNode.parentNode;
-  const rows = Array.from(table.querySelectorAll('tr'));
-  const row = rows.indexOf(node) + 1;
-  return applyFormat(delta, 'table', row);
+    node.parentElement?.tagName === 'TABLE'
+      ? node.parentElement
+      : node.parentElement?.parentElement;
+  if (table != null) {
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const row = rows.indexOf(node) + 1;
+    return applyFormat(delta, 'table', row);
+  }
 }
 
-function matchText(node, delta) {
+function matchText(node: HTMLElement, delta: Delta) {
+  // @ts-expect-error
   let text = node.data;
   // Word represents empty line with <o:p>&nbsp;</o:p>
-  if (node.parentNode.tagName === 'O:P') {
+  if (node.parentElement?.tagName === 'O:P') {
     return delta.insert(text.trim());
   }
   if (!isPre(node)) {
     if (text.trim().length === 0 && text.includes('\n')) {
       return delta;
     }
-    const replacer = (collapse, match) => {
+    const replacer = (collapse: unknown, match: string) => {
       const replaced = match.replace(/[^\u00a0]/g, ''); // \u00a0 is nbsp;
       return replaced.length < 1 && collapse ? ' ' : replaced;
     };
     text = text.replace(/\r\n/g, ' ').replace(/\n/g, ' ');
     text = text.replace(/\s\s+/g, replacer.bind(replacer, true)); // collapse whitespace
     if (
-      (node.previousSibling == null && isLine(node.parentNode)) ||
-      (node.previousSibling != null && isLine(node.previousSibling))
+      (node.previousSibling == null &&
+        node.parentElement != null &&
+        isLine(node.parentElement)) ||
+      (node.previousSibling instanceof Element && isLine(node.previousSibling))
     ) {
       text = text.replace(/^\s+/, replacer.bind(replacer, false));
     }
     if (
-      (node.nextSibling == null && isLine(node.parentNode)) ||
-      (node.nextSibling != null && isLine(node.nextSibling))
+      (node.nextSibling == null &&
+        node.parentElement != null &&
+        isLine(node.parentElement)) ||
+      (node.nextSibling instanceof Element && isLine(node.nextSibling))
     ) {
       text = text.replace(/\s+$/, replacer.bind(replacer, false));
     }

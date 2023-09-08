@@ -1,4 +1,5 @@
-import { Page, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { test } from './fixtures';
 import { SHORTKEY } from './utils';
 
@@ -7,7 +8,7 @@ const redo = (page: Page) => page.keyboard.press(`${SHORTKEY}+Shift+z`);
 
 const setUserOnly = (page: Page, value: boolean) =>
   page.evaluate(
-    value => {
+    (value) => {
       // @ts-expect-error
       window.quill.history.options.userOnly = value;
     },

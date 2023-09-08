@@ -7,23 +7,23 @@ import Container from '../blots/container';
 import Quill from '../core/quill';
 
 class CodeBlockContainer extends Container {
-  static create(value) {
+  static create(value: string) {
     const domNode = super.create(value) as Element;
     domNode.setAttribute('spellcheck', 'false');
     return domNode;
   }
 
-  code(index, length) {
+  code(index: number, length: number) {
     return (
       this.children
         // @ts-expect-error
-        .map(child => (child.length() <= 1 ? '' : child.domNode.innerText))
+        .map((child) => (child.length() <= 1 ? '' : child.domNode.innerText))
         .join('\n')
         .slice(index, index + length)
     );
   }
 
-  html(index, length) {
+  html(index: number, length: number) {
     // `\n`s are needed in order to support empty lines at the beginning and the end.
     // https://html.spec.whatwg.org/multipage/syntax.html#element-restrictions
     return `<pre>\n${escapeText(this.code(index, length))}\n</pre>`;

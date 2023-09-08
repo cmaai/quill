@@ -3,14 +3,21 @@ import { EmbedBlot, Scope } from 'parchment';
 import Quill from '../core/quill';
 import logger from '../core/logger';
 import Module from '../core/module';
+import type { Range } from '../core/selection';
 
 const debug = logger('quill:toolbar');
 
 type Handler = (value: any) => void;
 
-interface ToolbarProps {
-  container?: HTMLElement | null;
+export type ToolbarConfig = Array<
+  string[] | Array<string | Record<string, unknown>>
+>;
+export interface ToolbarProps {
+  container?: HTMLElement | ToolbarConfig | null;
   handlers?: Record<string, Handler>;
+  option?: number;
+  module?: boolean;
+  theme?: boolean;
 }
 
 class Toolbar extends Module<ToolbarProps> {
@@ -40,7 +47,7 @@ class Toolbar extends Module<ToolbarProps> {
     this.controls = [];
     this.handlers = {};
     if (this.options.handlers) {
-      Object.keys(this.options.handlers).forEach(format => {
+      Object.keys(this.options.handlers).forEach((format) => {
         const handler = this.options.handlers?.[format];
         if (handler) {
           this.addHandler(format, handler);
@@ -48,14 +55,14 @@ class Toolbar extends Module<ToolbarProps> {
       });
     }
     Array.from(this.container.querySelectorAll('button, select')).forEach(
-      input => {
+      (input) => {
         // @ts-expect-error
         this.attach(input);
       },
     );
     this.quill.on(Quill.events.EDITOR_CHANGE, (type, range) => {
       if (type === Quill.events.SELECTION_CHANGE) {
-        this.update(range);
+        this.update(range as Range);
       }
     });
     this.quill.on(Quill.events.SCROLL_OPTIMIZE, () => {
@@ -69,7 +76,7 @@ class Toolbar extends Module<ToolbarProps> {
   }
 
   attach(input: HTMLElement) {
-    let format = Array.from(input.classList).find(className => {
+    let format = Array.from(input.classList).find((className) => {
       return className.indexOf('ql-') === 0;
     });
     if (!format) return;
@@ -85,7 +92,7 @@ class Toolbar extends Module<ToolbarProps> {
       return;
     }
     const eventName = input.tagName === 'SELECT' ? 'change' : 'click';
-    input.addEventListener(eventName, e => {
+    input.addEventListener(eventName, (e) => {
       let value;
       if (input.tagName === 'SELECT') {
         // @ts-expect-error
@@ -137,12 +144,12 @@ class Toolbar extends Module<ToolbarProps> {
     this.controls.push([format, input]);
   }
 
-  update(range) {
+  update(range: Range | null) {
     const formats = range == null ? {} : this.quill.getFormat(range);
-    this.controls.forEach(pair => {
+    this.controls.forEach((pair) => {
       const [format, input] = pair;
       if (input.tagName === 'SELECT') {
-        let option;
+        let option: HTMLOptionElement | null = null;
         if (range == null) {
           option = null;
         } else if (formats[format] == null) {
@@ -155,26 +162,30 @@ class Toolbar extends Module<ToolbarProps> {
           option = input.querySelector(`option[value="${value}"]`);
         }
         if (option == null) {
-          // @ts-expect-error
+          // @ts-expect-error TODO fix me later
           input.value = ''; // TODO make configurable?
-          // @ts-expect-error
+          // @ts-expect-error TODO fix me later
           input.selectedIndex = -1;
         } else {
           option.selected = true;
         }
       } else if (range == null) {
         input.classList.remove('ql-active');
+        input.setAttribute('aria-pressed', 'false');
       } else if (input.hasAttribute('value')) {
         // both being null should match (default values)
         // '1' should match with 1 (headers)
+        const value = formats[format] as boolean | number | string | object;
         const isActive =
-          formats[format] === input.getAttribute('value') ||
-          (formats[format] != null &&
-            formats[format].toString() === input.getAttribute('value')) ||
-          (formats[format] == null && !input.getAttribute('value'));
+          value === input.getAttribute('value') ||
+          (value != null && value.toString() === input.getAttribute('value')) ||
+          (value == null && !input.getAttribute('value'));
         input.classList.toggle('ql-active', isActive);
+        input.setAttribute('aria-pressed', isActive.toString());
       } else {
-        input.classList.toggle('ql-active', formats[format] != null);
+        const isActive = formats[format] != null;
+        input.classList.toggle('ql-active', isActive);
+        input.setAttribute('aria-pressed', isActive.toString());
       }
     });
   }
@@ -185,6 +196,7 @@ function addButton(container: HTMLElement, format: string, value?: unknown) {
   const input = document.createElement('button');
   input.setAttribute('type', 'button');
   input.classList.add(`ql-${format}`);
+  input.setAttribute('aria-pressed', 'false');
   if (value != null) {
     // @ts-expect-error
     input.value = value;
@@ -202,10 +214,10 @@ function addControls(
     // @ts-expect-error
     groups = [groups];
   }
-  groups.forEach(controls => {
+  groups.forEach((controls: any) => {
     const group = document.createElement('span');
     group.classList.add('ql-formats');
-    controls.forEach(control => {
+    controls.forEach((control: any) => {
       if (typeof control === 'string') {
         addButton(group, control);
       } else {
@@ -222,13 +234,17 @@ function addControls(
   });
 }
 
-function addSelect(container, format, values) {
+function addSelect(
+  container: HTMLElement,
+  format: string,
+  values: Array<string | boolean>,
+) {
   const input = document.createElement('select');
   input.classList.add(`ql-${format}`);
-  values.forEach(value => {
+  values.forEach((value) => {
     const option = document.createElement('option');
     if (value !== false) {
-      option.setAttribute('value', value);
+      option.setAttribute('value', String(value));
     } else {
       option.setAttribute('selected', 'selected');
     }
@@ -245,7 +261,7 @@ Toolbar.DEFAULTS = {
       if (range == null) return;
       if (range.length === 0) {
         const formats = this.quill.getFormat();
-        Object.keys(formats).forEach(name => {
+        Object.keys(formats).forEach((name) => {
           // Clean functionality in existing apps only clean inline formats
           if (this.quill.scroll.query(name, Scope.INLINE) != null) {
             this.quill.format(name, false, Quill.sources.USER);

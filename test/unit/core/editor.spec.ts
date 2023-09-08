@@ -866,7 +866,7 @@ describe('Editor', () => {
         static className = 'my-blot';
         static blotName = 'my-blot';
 
-        formatAt(index, length, name, value) {
+        formatAt(index: number, length: number, name: string, value: string) {
           super.formatAt(index, length, name, value);
           if (name === 'test-style' && !!this.prev) {
             this.domNode.setAttribute('test-style', value);
@@ -1081,8 +1081,8 @@ describe('Editor', () => {
           .insert('\n', { header: 1, list: 'bullet' });
 
         expect(
-          getEditorDelta(editor => editor.insertContents(0, change)),
-        ).toEqual(getEditorDelta(editor => editor.applyDelta(change)));
+          getEditorDelta((editor) => editor.insertContents(0, change)),
+        ).toEqual(getEditorDelta((editor) => editor.applyDelta(change)));
       });
 
       test('block embeds with line formats', () => {
@@ -1093,8 +1093,8 @@ describe('Editor', () => {
           .insert('\n', { header: 1 });
 
         expect(
-          getEditorDelta(editor => editor.insertContents(0, change)),
-        ).toEqual(getEditorDelta(editor => editor.applyDelta(change)));
+          getEditorDelta((editor) => editor.insertContents(0, change)),
+        ).toEqual(getEditorDelta((editor) => editor.applyDelta(change)));
       });
 
       test('missing \\n before block embeds', () => {
@@ -1104,8 +1104,8 @@ describe('Editor', () => {
           .insert('b\n');
 
         expect(
-          getEditorDelta(editor => editor.insertContents(0, change)),
-        ).toEqual(getEditorDelta(editor => editor.applyDelta(change)));
+          getEditorDelta((editor) => editor.insertContents(0, change)),
+        ).toEqual(getEditorDelta((editor) => editor.applyDelta(change)));
       });
     });
   });
@@ -1214,8 +1214,18 @@ describe('Editor', () => {
 
   describe('getHTML', () => {
     test('inline', () => {
+      expect(
+        createEditor('<blockquote>Test</blockquote>').getHTML(1, 2),
+      ).toEqual('es');
+
+      expect(
+        createEditor('<blockquote>Test</blockquote>').getHTML(0, 4),
+      ).toEqual('Test');
+    });
+
+    test('entire line', () => {
       const editor = createEditor('<blockquote>Test</blockquote>');
-      expect(editor.getHTML(1, 2)).toEqual('es');
+      expect(editor.getHTML(0, 5)).toEqual('<blockquote>Test</blockquote>');
     });
 
     test('across lines', () => {

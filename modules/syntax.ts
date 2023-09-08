@@ -1,5 +1,6 @@
 import Delta from 'quill-delta';
-import { ClassAttributor, Scope, ScrollBlot } from 'parchment';
+import { ClassAttributor, Scope } from 'parchment';
+import type { Blot, ScrollBlot } from 'parchment';
 import Inline from '../blots/inline';
 import Quill from '../core/quill';
 import Module from '../core/module';
@@ -45,7 +46,7 @@ class CodeToken extends Inline {
     }
   }
 
-  optimize(...args) {
+  optimize(...args: unknown[]) {
     // @ts-expect-error
     super.optimize(...args);
     if (!TokenAttributor.value(this.domNode)) {
@@ -99,17 +100,17 @@ class SyntaxCodeBlockContainer extends CodeBlockContainer {
     this.scroll.emitMount(this);
   }
 
-  format(name, value) {
+  format(name: string, value: unknown) {
     if (name === SyntaxCodeBlock.blotName) {
       this.forceNext = true;
-      this.children.forEach(child => {
+      this.children.forEach((child) => {
         // @ts-expect-error
         child.format(name, value);
       });
     }
   }
 
-  formatAt(index: number, length: number, name, value) {
+  formatAt(index: number, length: number, name: string, value: unknown) {
     if (name === SyntaxCodeBlock.blotName) {
       this.forceNext = true;
     }
@@ -122,9 +123,9 @@ class SyntaxCodeBlockContainer extends CodeBlockContainer {
   ) {
     if (this.children.head == null) return;
     const nodes = Array.from(this.domNode.childNodes).filter(
-      node => node !== this.uiNode,
+      (node) => node !== this.uiNode,
     );
-    const text = `${nodes.map(node => node.textContent).join('\n')}\n`;
+    const text = `${nodes.map((node) => node.textContent).join('\n')}\n`;
     const language = SyntaxCodeBlock.formats(this.children.head.domNode);
     if (forced || this.forceNext || this.cachedText !== text) {
       if (text.trim().length > 0 || this.cachedText == null) {
@@ -137,7 +138,7 @@ class SyntaxCodeBlockContainer extends CodeBlockContainer {
           // Should be all retains
           if (!retain) return index;
           if (attributes) {
-            Object.keys(attributes).forEach(format => {
+            Object.keys(attributes).forEach((format) => {
               if (
                 [SyntaxCodeBlock.blotName, CodeToken.blotName].includes(format)
               ) {
@@ -155,7 +156,7 @@ class SyntaxCodeBlockContainer extends CodeBlockContainer {
     }
   }
 
-  html(index, length) {
+  html(index: number, length: number) {
     const [codeBlock] = this.children.find(index);
     const language = codeBlock
       ? SyntaxCodeBlock.formats(codeBlock.domNode)
@@ -213,17 +214,20 @@ class Syntax extends Module<SyntaxOptions> {
       );
     }
     // @ts-expect-error Fix me later
-    this.languages = this.options.languages.reduce((memo, { key }) => {
-      memo[key] = true;
-      return memo;
-    }, {});
+    this.languages = this.options.languages.reduce(
+      (memo: Record<string, unknown>, { key }) => {
+        memo[key] = true;
+        return memo;
+      },
+      {},
+    );
     this.highlightBlot = this.highlightBlot.bind(this);
     this.initListener();
     this.initTimer();
   }
 
   initListener() {
-    this.quill.on(Quill.events.SCROLL_BLOT_MOUNT, blot => {
+    this.quill.on(Quill.events.SCROLL_BLOT_MOUNT, (blot: Blot) => {
       if (!(blot instanceof SyntaxCodeBlockContainer)) return;
       const select = this.quill.root.ownerDocument.createElement('select');
       // @ts-expect-error Fix me later
@@ -268,7 +272,7 @@ class Syntax extends Module<SyntaxOptions> {
       blot == null
         ? this.quill.scroll.descendants(SyntaxCodeBlockContainer)
         : [blot];
-    blots.forEach(container => {
+    blots.forEach((container) => {
       container.highlight(this.highlightBlot, force);
     });
     this.quill.update(Quill.sources.SILENT);
@@ -277,7 +281,7 @@ class Syntax extends Module<SyntaxOptions> {
     }
   }
 
-  highlightBlot(text, language = 'plain') {
+  highlightBlot(text: string, language = 'plain') {
     language = this.languages[language] ? language : 'plain';
     if (language === 'plain') {
       return escapeText(text)

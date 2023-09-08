@@ -1,17 +1,18 @@
 import merge from 'lodash.merge';
-import Quill from '../core/quill';
+import type Quill from '../core/quill';
 import Emitter from '../core/emitter';
 import Theme from '../core/theme';
+import type { ThemeOptions } from '../core/theme';
 import ColorPicker from '../ui/color-picker';
 import IconPicker from '../ui/icon-picker';
 import Picker from '../ui/picker';
 import Tooltip from '../ui/tooltip';
-import { Range } from '../core/selection';
-import Clipboard from '../modules/clipboard';
-import History from '../modules/history';
-import Keyboard from '../modules/keyboard';
-import Uploader from '../modules/uploader';
-import Selection from '../core/selection';
+import type { Range } from '../core/selection';
+import type Clipboard from '../modules/clipboard';
+import type History from '../modules/history';
+import type Keyboard from '../modules/keyboard';
+import type Uploader from '../modules/uploader';
+import type Selection from '../core/selection';
 
 const ALIGNS = [false, 'center', 'right', 'justify'];
 
@@ -63,7 +64,7 @@ class BaseTheme extends Theme {
   pickers: Picker[];
   tooltip?: Tooltip;
 
-  constructor(quill: Quill, options) {
+  constructor(quill: Quill, options: ThemeOptions) {
     super(quill, options);
     const listener = (e: MouseEvent) => {
       if (!document.body.contains(quill.root)) {
@@ -81,7 +82,7 @@ class BaseTheme extends Theme {
         this.tooltip.hide();
       }
       if (this.pickers != null) {
-        this.pickers.forEach(picker => {
+        this.pickers.forEach((picker) => {
           // @ts-expect-error
           if (!picker.container.contains(e.target)) {
             picker.close();
@@ -107,16 +108,20 @@ class BaseTheme extends Theme {
     return module;
   }
 
-  buildButtons(buttons: HTMLElement[], icons) {
-    Array.from(buttons).forEach(button => {
+  buildButtons(
+    buttons: NodeListOf<HTMLElement>,
+    icons: Record<string, Record<string, string>>,
+  ) {
+    Array.from(buttons).forEach((button) => {
       const className = button.getAttribute('class') || '';
-      className.split(/\s+/).forEach(name => {
+      className.split(/\s+/).forEach((name) => {
         if (!name.startsWith('ql-')) return;
         name = name.slice('ql-'.length);
         if (icons[name] == null) return;
         if (name === 'direction') {
           button.innerHTML = icons[name][''] + icons[name].rtl;
         } else if (typeof icons[name] === 'string') {
+          // @ts-expect-error
           button.innerHTML = icons[name];
         } else {
           // @ts-expect-error
@@ -129,14 +134,18 @@ class BaseTheme extends Theme {
     });
   }
 
-  buildPickers(selects: HTMLElement[], icons) {
-    this.pickers = Array.from(selects).map(select => {
+  buildPickers(
+    selects: NodeListOf<HTMLSelectElement>,
+    icons: Record<string, string | Record<string, string>>,
+  ) {
+    this.pickers = Array.from(selects).map((select) => {
       if (select.classList.contains('ql-align')) {
         if (select.querySelector('option') == null) {
           fillSelect(select, ALIGNS);
         }
-        // @ts-expect-error
-        return new IconPicker(select, icons.align);
+        if (typeof icons.align === 'object') {
+          return new IconPicker(select, icons.align);
+        }
       }
       if (
         select.classList.contains('ql-background') ||
@@ -152,7 +161,7 @@ class BaseTheme extends Theme {
             format === 'background' ? '#ffffff' : '#000000',
           );
         }
-        return new ColorPicker(select, icons[format]);
+        return new ColorPicker(select, icons[format] as string);
       }
       if (select.querySelector('option') == null) {
         if (select.classList.contains('ql-font')) {
@@ -163,11 +172,10 @@ class BaseTheme extends Theme {
           fillSelect(select, SIZES);
         }
       }
-      // @ts-expect-error
       return new Picker(select);
     });
     const update = () => {
-      this.pickers.forEach(picker => {
+      this.pickers.forEach((picker) => {
         picker.update();
       });
     };
@@ -222,7 +230,7 @@ class BaseTooltip extends Tooltip {
 
   listen() {
     // @ts-expect-error Fix me later
-    this.textbox.addEventListener('keydown', event => {
+    this.textbox.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         this.save();
         event.preventDefault();
@@ -241,20 +249,20 @@ class BaseTooltip extends Tooltip {
   edit(mode = 'link', preview: string | null = null) {
     this.root.classList.remove('ql-hidden');
     this.root.classList.add('ql-editing');
+    if (this.textbox == null) return;
+
     if (preview != null) {
-      // @ts-expect-error Fix me later
       this.textbox.value = preview;
     } else if (mode !== this.root.getAttribute('data-mode')) {
-      // @ts-expect-error Fix me later
       this.textbox.value = '';
     }
-    this.position(this.quill.getBounds(this.quill.selection.savedRange));
-    // @ts-expect-error Fix me later
+    const bounds = this.quill.getBounds(this.quill.selection.savedRange);
+    if (bounds != null) {
+      this.position(bounds);
+    }
     this.textbox.select();
-    // @ts-expect-error Fix me later
     this.textbox.setAttribute(
       'placeholder',
-      // @ts-expect-error Fix me later
       this.textbox.getAttribute(`data-${mode}`) || '',
     );
     this.root.setAttribute('data-mode', mode);
@@ -315,7 +323,7 @@ class BaseTooltip extends Tooltip {
   }
 }
 
-function extractVideoUrl(url) {
+function extractVideoUrl(url: string) {
   let match =
     url.match(
       /^(?:(https?):\/\/)?(?:(?:www|m)\.)?youtube\.com\/watch.*v=([a-zA-Z0-9_-]+)/,
@@ -333,13 +341,17 @@ function extractVideoUrl(url) {
   return url;
 }
 
-function fillSelect(select, values, defaultValue: unknown = false) {
-  values.forEach(value => {
+function fillSelect(
+  select: HTMLSelectElement,
+  values: Array<string | boolean>,
+  defaultValue: unknown = false,
+) {
+  values.forEach((value) => {
     const option = document.createElement('option');
     if (value === defaultValue) {
       option.setAttribute('selected', 'selected');
     } else {
-      option.setAttribute('value', value);
+      option.setAttribute('value', String(value));
     }
     select.appendChild(option);
   });

@@ -1,4 +1,4 @@
-import { LinkedList } from 'parchment';
+import type { LinkedList } from 'parchment';
 import Block from '../blots/block';
 import Container from '../blots/container';
 
@@ -6,7 +6,7 @@ class TableCell extends Block {
   static blotName = 'table';
   static tagName = 'TD';
 
-  static create(value) {
+  static create(value: string) {
     // @ts-expect-error
     const node = super.create() as Element;
     if (value) {
@@ -17,7 +17,7 @@ class TableCell extends Block {
     return node;
   }
 
-  static formats(domNode) {
+  static formats(domNode: HTMLElement) {
     if (domNode.hasAttribute('data-row')) {
       return domNode.getAttribute('data-row');
     }
@@ -33,7 +33,7 @@ class TableCell extends Block {
     return -1;
   }
 
-  format(name, value) {
+  format(name: string, value: string) {
     if (name === TableCell.blotName && value) {
       this.domNode.setAttribute('data-row', value);
     } else {
@@ -84,10 +84,9 @@ class TableRow extends Container {
     return false;
   }
 
-  optimize(...args) {
-    // @ts-expect-error
-    super.optimize(...args);
-    this.children.forEach(child => {
+  optimize(context: { [key: string]: any }) {
+    super.optimize(context);
+    this.children.forEach((child) => {
       if (child.next == null) return;
       const childFormats = child.formats();
       const nextFormats = child.next.formats();
@@ -136,7 +135,7 @@ class TableContainer extends Container {
     const maxColumns = rows.reduce((max, row) => {
       return Math.max(row.children.length, max);
     }, 0);
-    rows.forEach(row => {
+    rows.forEach((row) => {
       new Array(maxColumns - row.children.length).fill(0).forEach(() => {
         let value;
         if (row.children.head != null) {
@@ -151,14 +150,14 @@ class TableContainer extends Container {
   }
 
   cells(column: number) {
-    return this.rows().map(row => row.children.at(column));
+    return this.rows().map((row) => row.children.at(column));
   }
 
   deleteColumn(index: number) {
     // @ts-expect-error
     const [body] = this.descendant(TableBody) as TableBody[];
     if (body == null || body.children.head == null) return;
-    body.children.forEach(row => {
+    body.children.forEach((row) => {
       const cell = row.children.at(index);
       if (cell != null) {
         cell.remove();
@@ -170,7 +169,7 @@ class TableContainer extends Container {
     // @ts-expect-error
     const [body] = this.descendant(TableBody) as TableBody[];
     if (body == null || body.children.head == null) return;
-    body.children.forEach(row => {
+    body.children.forEach((row) => {
       const ref = row.children.at(index);
       // @ts-expect-error
       const value = TableCell.formats(row.children.head.domNode);
@@ -196,7 +195,7 @@ class TableContainer extends Container {
   rows() {
     const body = this.children.head;
     if (body == null) return [];
-    return body.children.map(row => row);
+    return body.children.map((row) => row);
   }
 }
 

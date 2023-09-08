@@ -1,5 +1,5 @@
 import Delta, { OpIterator } from 'quill-delta';
-import Op from 'quill-delta/dist/Op';
+import type { Op, AttributeMap } from 'quill-delta';
 import Module from '../core/module';
 
 export type CellData = {
@@ -52,7 +52,13 @@ export const composePosition = (delta: Delta, index: number) => {
   return newIndex;
 };
 
-const compactCellData = ({ content, attributes }) => {
+const compactCellData = ({
+  content,
+  attributes,
+}: {
+  content: Delta;
+  attributes: AttributeMap | undefined;
+}) => {
   const data: CellData = {};
   if (content.length() > 0) {
     data.content = content.ops;
@@ -63,7 +69,15 @@ const compactCellData = ({ content, attributes }) => {
   return Object.keys(data).length > 0 ? data : null;
 };
 
-const compactTableData = ({ rows, columns, cells }) => {
+const compactTableData = ({
+  rows,
+  columns,
+  cells,
+}: {
+  rows: Delta;
+  columns: Delta;
+  cells: Record<string, CellData>;
+}) => {
   const data: TableData = {};
   if (rows.length() > 0) {
     data.rows = rows.ops;
@@ -80,9 +94,12 @@ const compactTableData = ({ rows, columns, cells }) => {
   return data;
 };
 
-const reindexCellIdentities = (cells, { rows, columns }) => {
-  const reindexedCells = {};
-  Object.keys(cells).forEach(identity => {
+const reindexCellIdentities = (
+  cells: Record<string, CellData>,
+  { rows, columns }: { rows: Delta; columns: Delta },
+) => {
+  const reindexedCells: Record<string, CellData> = {};
+  Object.keys(cells).forEach((identity) => {
     let [row, column] = parseCellIdentity(identity);
 
     // @ts-expect-error Fix me later
@@ -110,7 +127,7 @@ export const tableHandler = {
       columns: new Delta(b.columns || []),
     });
 
-    Object.keys(b.cells || {}).forEach(identity => {
+    Object.keys(b.cells || {}).forEach((identity) => {
       const aCell = cells[identity] || {};
       // @ts-expect-error Fix me later
       const bCell = b.cells[identity];
@@ -154,7 +171,7 @@ export const tableHandler = {
       columns: bDeltas.columns.transform(aDeltas.columns, !priority),
     });
 
-    Object.keys(a.cells || {}).forEach(identity => {
+    Object.keys(a.cells || {}).forEach((identity) => {
       let [row, column] = parseCellIdentity(identity);
       // @ts-expect-error Fix me later
       row = composePosition(rows, row);
@@ -202,7 +219,7 @@ export const tableHandler = {
       rows,
       columns,
     });
-    Object.keys(cells).forEach(identity => {
+    Object.keys(cells).forEach((identity) => {
       const changeCell = cells[identity] || {};
       const baseCell = (base.cells || {})[identity] || {};
       const content = new Delta(changeCell.content || []).invert(
@@ -222,7 +239,7 @@ export const tableHandler = {
 
     // Cells may be removed when their row or column is removed
     // by row/column deltas. We should add them back.
-    Object.keys(base.cells || {}).forEach(identity => {
+    Object.keys(base.cells || {}).forEach((identity) => {
       const [row, column] = parseCellIdentity(identity);
       if (
         composePosition(new Delta(change.rows || []), row) === null ||

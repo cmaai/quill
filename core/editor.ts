@@ -1,12 +1,13 @@
 import cloneDeep from 'lodash.clonedeep';
 import isEqual from 'lodash.isequal';
 import merge from 'lodash.merge';
-import { LeafBlot, EmbedBlot, Scope } from 'parchment';
+import { LeafBlot, EmbedBlot, Scope, ParentBlot } from 'parchment';
+import type { Blot } from 'parchment';
 import Delta, { AttributeMap, Op } from 'quill-delta';
 import Block, { BlockEmbed, bubbleFormats } from '../blots/block';
 import Break from '../blots/break';
 import CursorBlot from '../blots/cursor';
-import Scroll from '../blots/scroll';
+import type Scroll from '../blots/scroll';
 import TextBlot, { escapeText } from '../blots/text';
 import { Range } from './selection';
 
@@ -51,7 +52,9 @@ class Editor {
           let formats = merge({}, bubbleFormats(line));
           if (line instanceof Block) {
             const [leaf] = line.descendant(LeafBlot, offset);
-            formats = merge(formats, bubbleFormats(leaf));
+            if (leaf) {
+              formats = merge(formats, bubbleFormats(leaf));
+            }
           }
           attributes = AttributeMap.diff(formats, attributes) || {};
         } else if (typeof op.insert === 'object') {
@@ -83,8 +86,10 @@ class Editor {
 
           if (isInlineEmbed) {
             const [leaf] = this.scroll.descendant(LeafBlot, index);
-            const formats = merge({}, bubbleFormats(leaf));
-            attributes = AttributeMap.diff(formats, attributes) || {};
+            if (leaf) {
+              const formats = merge({}, bubbleFormats(leaf));
+              attributes = AttributeMap.diff(formats, attributes) || {};
+            }
           }
         }
         scrollLength += length;
@@ -97,7 +102,7 @@ class Editor {
           this.scroll.updateEmbedAt(index, key, op.retain[key]);
         }
       }
-      Object.keys(attributes).forEach(name => {
+      Object.keys(attributes).forEach((name) => {
         this.scroll.formatAt(index, length, name, attributes[name]);
       });
       const prependedLength = isImplicitNewlinePrepended ? 1 : 0;
@@ -130,8 +135,8 @@ class Editor {
     formats: Record<string, unknown> = {},
   ): Delta {
     this.scroll.update();
-    Object.keys(formats).forEach(format => {
-      this.scroll.lines(index, Math.max(length, 1)).forEach(line => {
+    Object.keys(formats).forEach((format) => {
+      this.scroll.lines(index, Math.max(length, 1)).forEach((line) => {
         line.format(format, formats[format]);
       });
     });
@@ -145,7 +150,7 @@ class Editor {
     length: number,
     formats: Record<string, unknown> = {},
   ): Delta {
-    Object.keys(formats).forEach(format => {
+    Object.keys(formats).forEach((format) => {
       this.scroll.formatAt(index, length, format, formats[format]);
     });
     const delta = new Delta().retain(index).retain(length, cloneDeep(formats));
@@ -166,7 +171,7 @@ class Editor {
     let lines: (Block | BlockEmbed)[] = [];
     let leaves: LeafBlot[] = [];
     if (length === 0) {
-      this.scroll.path(index).forEach(path => {
+      this.scroll.path(index).forEach((path) => {
         const [blot] = path;
         if (blot instanceof Block) {
           lines.push(blot);
@@ -178,9 +183,10 @@ class Editor {
       lines = this.scroll.lines(index, length);
       leaves = this.scroll.descendants(LeafBlot, index, length);
     }
-    const [lineFormats, leafFormats] = [lines, leaves].map(blots => {
-      if (blots.length === 0) return {};
-      let formats = bubbleFormats(blots.shift());
+    const [lineFormats, leafFormats] = [lines, leaves].map((blots) => {
+      const blot = blots.shift();
+      if (blot == null) return {};
+      let formats = bubbleFormats(blot);
       while (Object.keys(formats).length > 0) {
         const blot = blots.shift();
         if (blot == null) return formats;
@@ -194,8 +200,10 @@ class Editor {
   getHTML(index: number, length: number): string {
     const [line, lineOffset] = this.scroll.line(index);
     if (line) {
+      const lineLength = line.length();
       if (line.length() >= lineOffset + length) {
-        return convertHTML(line, lineOffset, length, true);
+        const excludeOuterTag = !(lineOffset === 0 && length === lineLength);
+        return convertHTML(line, lineOffset, length, excludeOuterTag);
       }
       return convertHTML(this.scroll, index, length, true);
     }
@@ -204,8 +212,8 @@ class Editor {
 
   getText(index: number, length: number): string {
     return this.getContents(index, length)
-      .filter(op => typeof op.insert === 'string')
-      .map(op => op.insert)
+      .filter((op) => typeof op.insert === 'string')
+      .map((op) => op.insert)
       .join('');
   }
 
@@ -228,7 +236,7 @@ class Editor {
   ): Delta {
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
     this.scroll.insertAt(index, text);
-    Object.keys(formats).forEach(format => {
+    Object.keys(formats).forEach((format) => {
       this.scroll.formatAt(index, text.length, format, formats[format]);
     });
     return this.update(
@@ -278,9 +286,8 @@ class Editor {
       this.scroll.find(mutations[0].target)
     ) {
       // Optimization for character changes
-      const textBlot = this.scroll.find(mutations[0].target);
+      const textBlot = this.scroll.find(mutations[0].target) as Blot;
       const formats = bubbleFormats(textBlot);
-      // @ts-expect-error Fix me later
       const index = textBlot.offset(this.scroll);
       // @ts-expect-error Fix me later
       const oldValue = mutations[0].oldValue.replace(CursorBlot.CONTENTS, '');
@@ -311,7 +318,18 @@ class Editor {
   }
 }
 
-function convertListHTML(items, lastIndent, types) {
+interface ListItem {
+  child: Blot;
+  offset: number;
+  length: number;
+  indent: number;
+  type: string;
+}
+function convertListHTML(
+  items: ListItem[],
+  lastIndent: number,
+  types: string[],
+): string {
   if (items.length === 0) {
     const [endTag] = getListType(types.pop());
     if (lastIndent <= 0) {
@@ -344,19 +362,27 @@ function convertListHTML(items, lastIndent, types) {
   return `</li></${endTag}>${convertListHTML(items, lastIndent - 1, types)}`;
 }
 
-function convertHTML(blot, index, length, isRoot = false) {
-  if (typeof blot.html === 'function') {
+function convertHTML(
+  blot: Blot,
+  index: number,
+  length: number,
+  excludeOuterTag = false,
+): string {
+  if ('html' in blot && typeof blot.html === 'function') {
     return blot.html(index, length);
   }
   if (blot instanceof TextBlot) {
     return escapeText(blot.value().slice(index, index + length));
   }
-  if (blot.children) {
+  if (blot instanceof ParentBlot) {
     // TODO fix API
     if (blot.statics.blotName === 'list-container') {
       const items: any[] = [];
       blot.children.forEachAt(index, length, (child, offset, childLength) => {
-        const formats = child.formats();
+        const formats =
+          'formats' in child && typeof child.formats === 'function'
+            ? child.formats()
+            : {};
         items.push({
           child,
           offset,
@@ -371,10 +397,10 @@ function convertHTML(blot, index, length, isRoot = false) {
     blot.children.forEachAt(index, length, (child, offset, childLength) => {
       parts.push(convertHTML(child, offset, childLength));
     });
-    if (isRoot || blot.statics.blotName === 'list') {
+    if (excludeOuterTag || blot.statics.blotName === 'list') {
       return parts.join('');
     }
-    const { outerHTML, innerHTML } = blot.domNode;
+    const { outerHTML, innerHTML } = blot.domNode as Element;
     const [start, end] = outerHTML.split(`>${innerHTML}<`);
     // TODO cleanup
     if (start === '<table') {
@@ -382,29 +408,36 @@ function convertHTML(blot, index, length, isRoot = false) {
     }
     return `${start}>${parts.join('')}<${end}`;
   }
-  return blot.domNode.outerHTML;
+  return blot.domNode instanceof Element ? blot.domNode.outerHTML : '';
 }
 
-function combineFormats(formats, combined) {
-  return Object.keys(combined).reduce((merged, name) => {
-    if (formats[name] == null) return merged;
-    if (combined[name] === formats[name]) {
-      merged[name] = combined[name];
-    } else if (Array.isArray(combined[name])) {
-      if (combined[name].indexOf(formats[name]) < 0) {
-        merged[name] = combined[name].concat([formats[name]]);
+function combineFormats(
+  formats: Record<string, unknown>,
+  combined: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.keys(combined).reduce(
+    (merged, name) => {
+      if (formats[name] == null) return merged;
+      const combinedValue = combined[name];
+      if (combinedValue === formats[name]) {
+        merged[name] = combinedValue;
+      } else if (Array.isArray(combinedValue)) {
+        if (combinedValue.indexOf(formats[name]) < 0) {
+          merged[name] = combinedValue.concat([formats[name]]);
+        } else {
+          // If style already exists, don't add to an array, but don't lose other styles
+          merged[name] = combinedValue;
+        }
       } else {
-        // If style already exists, don't add to an array, but don't lose other styles
-        merged[name] = combined[name];
+        merged[name] = [combinedValue, formats[name]];
       }
-    } else {
-      merged[name] = [combined[name], formats[name]];
-    }
-    return merged;
-  }, {});
+      return merged;
+    },
+    {} as Record<string, unknown>,
+  );
 }
 
-function getListType(type) {
+function getListType(type: string | undefined) {
   const tag = type === 'ordered' ? 'ol' : 'ul';
   switch (type) {
     case 'checked':
@@ -432,7 +465,7 @@ function shiftRange({ index, length }: Range, amount: number) {
 
 function splitOpLines(ops: Op[]) {
   const split: Op[] = [];
-  ops.forEach(op => {
+  ops.forEach((op) => {
     if (typeof op.insert === 'string') {
       const lines = op.insert.split('\n');
       lines.forEach((line, index) => {

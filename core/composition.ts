@@ -1,22 +1,25 @@
 import Embed from '../blots/embed';
-import Scroll from '../blots/scroll';
+import type Scroll from '../blots/scroll';
 import Emitter from './emitter';
 
 class Composition {
   isComposing = false;
 
-  constructor(private scroll: Scroll, private emitter: Emitter) {
+  constructor(
+    private scroll: Scroll,
+    private emitter: Emitter,
+  ) {
     this.setupListeners();
   }
 
   private setupListeners() {
-    this.scroll.domNode.addEventListener('compositionstart', event => {
+    this.scroll.domNode.addEventListener('compositionstart', (event) => {
       if (!this.isComposing) {
         this.handleCompositionStart(event);
       }
     });
 
-    this.scroll.domNode.addEventListener('compositionend', event => {
+    this.scroll.domNode.addEventListener('compositionend', (event) => {
       if (this.isComposing) {
         this.handleCompositionEnd(event);
       }

@@ -1,18 +1,19 @@
 import cloneDeep from 'lodash.clonedeep';
 import isEqual from 'lodash.isequal';
 import Delta, { AttributeMap } from 'quill-delta';
-import { BlockBlot, EmbedBlot, Scope, TextBlot } from 'parchment';
+import { EmbedBlot, Scope, TextBlot } from 'parchment';
+import type { Blot, BlockBlot } from 'parchment';
 import Quill from '../core/quill';
 import logger from '../core/logger';
 import Module from '../core/module';
-import { BlockEmbed } from '../blots/block';
-import { Range } from '../core/selection';
+import type { BlockEmbed } from '../blots/block';
+import type { Range } from '../core/selection';
 
 const debug = logger('quill:keyboard');
 
 const SHORTKEY = /Mac/i.test(navigator.platform) ? 'metaKey' : 'ctrlKey';
 
-interface Context {
+export interface Context {
   collapsed: boolean;
   empty: boolean;
   offset: number;
@@ -60,9 +61,9 @@ interface KeyboardOptions {
 class Keyboard extends Module<KeyboardOptions> {
   static DEFAULTS: KeyboardOptions;
 
-  static match(evt: KeyboardEvent, binding) {
+  static match(evt: KeyboardEvent, binding: BindingObject) {
     if (
-      ['altKey', 'ctrlKey', 'metaKey', 'shiftKey'].some(key => {
+      (['altKey', 'ctrlKey', 'metaKey', 'shiftKey'] as const).some((key) => {
         return !!binding[key] !== evt[key] && binding[key] !== null;
       })
     ) {
@@ -77,7 +78,7 @@ class Keyboard extends Module<KeyboardOptions> {
     super(quill, options);
     this.bindings = {};
     // @ts-expect-error Fix me later
-    Object.keys(this.options.bindings).forEach(name => {
+    Object.keys(this.options.bindings).forEach((name) => {
       // @ts-expect-error Fix me later
       if (this.options.bindings[name]) {
         // @ts-expect-error Fix me later
@@ -158,7 +159,7 @@ class Keyboard extends Module<KeyboardOptions> {
       handler = { handler };
     }
     const keys = Array.isArray(binding.key) ? binding.key : [binding.key];
-    keys.forEach(key => {
+    keys.forEach((key) => {
       const singleBinding = {
         ...binding,
         key,
@@ -171,12 +172,14 @@ class Keyboard extends Module<KeyboardOptions> {
   }
 
   listen() {
-    this.quill.root.addEventListener('keydown', evt => {
+    this.quill.root.addEventListener('keydown', (evt) => {
       if (evt.defaultPrevented || evt.isComposing) return;
       const bindings = (this.bindings[evt.key] || []).concat(
         this.bindings[evt.which] || [],
       );
-      const matches = bindings.filter(binding => Keyboard.match(evt, binding));
+      const matches = bindings.filter((binding) =>
+        Keyboard.match(evt, binding),
+      );
       if (matches.length === 0) return;
       // @ts-expect-error
       const blot = Quill.find(evt.target, true);
@@ -206,7 +209,7 @@ class Keyboard extends Module<KeyboardOptions> {
         suffix: suffixText,
         event: evt,
       };
-      const prevented = matches.some(binding => {
+      const prevented = matches.some((binding) => {
         if (
           binding.collapsed != null &&
           binding.collapsed !== curContext.collapsed
@@ -221,13 +224,13 @@ class Keyboard extends Module<KeyboardOptions> {
         }
         if (Array.isArray(binding.format)) {
           // any format is present
-          if (binding.format.every(name => curContext.format[name] == null)) {
+          if (binding.format.every((name) => curContext.format[name] == null)) {
             return false;
           }
         } else if (typeof binding.format === 'object') {
           // all formats must match
           if (
-            !Object.keys(binding.format).every(name => {
+            !Object.keys(binding.format).every((name) => {
               // @ts-expect-error Fix me later
               if (binding.format[name] === true)
                 return curContext.format[name] != null;
@@ -324,7 +327,7 @@ class Keyboard extends Module<KeyboardOptions> {
 
   handleEnter(range: Range, context: Context) {
     const lineFormats = Object.keys(context.format).reduce(
-      (formats, format) => {
+      (formats: Record<string, unknown>, format) => {
         if (
           this.quill.scroll.query(format, Scope.BLOCK) &&
           !Array.isArray(context.format[format])
@@ -805,7 +808,7 @@ function deleteRange({ quill, range }: { quill: Quill; range: Range }) {
   quill.setSelection(range.index, Quill.sources.SILENT);
 }
 
-function tableSide(table, row, cell, offset) {
+function tableSide(_table: unknown, row: Blot, cell: Blot, offset: number) {
   if (row.prev == null && row.next == null) {
     if (cell.prev == null && cell.next == null) {
       return offset === 0 ? -1 : 1;

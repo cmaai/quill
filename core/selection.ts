@@ -1,10 +1,11 @@
 import { LeafBlot, Scope } from 'parchment';
 import cloneDeep from 'lodash.clonedeep';
 import isEqual from 'lodash.isequal';
-import Emitter, { EmitterSource } from './emitter';
+import Emitter from './emitter';
+import type { EmitterSource } from './emitter';
 import logger from './logger';
-import Cursor from '../blots/cursor';
-import Scroll from '../blots/scroll';
+import type Cursor from '../blots/cursor';
+import type Scroll from '../blots/scroll';
 
 const debug = logger('quill:selection');
 
@@ -19,8 +20,20 @@ interface NormalizedRange {
   native: NativeRange;
 }
 
+export interface Bounds {
+  bottom: number;
+  height: number;
+  left: number;
+  right: number;
+  top: number;
+  width: number;
+}
+
 class Range {
-  constructor(public index: number, public length = 0) {}
+  constructor(
+    public index: number,
+    public length = 0,
+  ) {}
 }
 
 class Selection {
@@ -59,30 +72,34 @@ class Selection {
       const native = this.getNativeRange();
       if (native == null) return;
       if (native.start.node === this.cursor.textNode) return; // cursor.restore() will handle
-      this.emitter.once(Emitter.events.SCROLL_UPDATE, (source, mutations) => {
-        try {
-          if (
-            this.root.contains(native.start.node) &&
-            this.root.contains(native.end.node)
-          ) {
-            this.setNativeRange(
-              native.start.node,
-              native.start.offset,
-              native.end.node,
-              native.end.offset,
+      this.emitter.once(
+        Emitter.events.SCROLL_UPDATE,
+        (source, mutations: MutationRecord[]) => {
+          try {
+            if (
+              this.root.contains(native.start.node) &&
+              this.root.contains(native.end.node)
+            ) {
+              this.setNativeRange(
+                native.start.node,
+                native.start.offset,
+                native.end.node,
+                native.end.offset,
+              );
+            }
+            const triggeredByTyping = mutations.some(
+              (mutation) =>
+                mutation.type === 'characterData' ||
+                mutation.type === 'childList' ||
+                (mutation.type === 'attributes' &&
+                  mutation.target === this.root),
             );
+            this.update(triggeredByTyping ? Emitter.sources.SILENT : source);
+          } catch (ignored) {
+            // ignore
           }
-          const triggeredByTyping = mutations.some(
-            mutation =>
-              mutation.type === 'characterData' ||
-              mutation.type === 'childList' ||
-              (mutation.type === 'attributes' && mutation.target === this.root),
-          );
-          this.update(triggeredByTyping ? Emitter.sources.SILENT : source);
-        } catch (ignored) {
-          // ignore
-        }
-      });
+        },
+      );
     });
     this.emitter.on(Emitter.events.SCROLL_OPTIMIZE, (mutations, context) => {
       if (context.range) {
@@ -131,7 +148,7 @@ class Selection {
     this.setRange(this.savedRange);
   }
 
-  format(format, value) {
+  format(format: string, value: unknown) {
     this.scroll.update();
     const nativeRange = this.getNativeRange();
     if (
@@ -177,7 +194,7 @@ class Selection {
       range.setEnd(node, offset);
       return range.getBoundingClientRect();
     }
-    let side = 'left';
+    let side: 'left' | 'right' = 'left';
     let rect: DOMRect;
     if (node instanceof Text) {
       // Return null if the text node is empty because it is
@@ -238,7 +255,8 @@ class Selection {
   hasFocus(): boolean {
     return (
       document.activeElement === this.root ||
-      contains(this.root, document.activeElement)
+      (document.activeElement != null &&
+        contains(this.root, document.activeElement))
     );
   }
 
@@ -249,7 +267,7 @@ class Selection {
     if (!range.native.collapsed) {
       positions.push([range.end.node, range.end.offset]);
     }
-    const indexes = positions.map(position => {
+    const indexes = positions.map((position) => {
       const [node, offset] = position;
       const blot = this.scroll.find(node, true);
       // @ts-expect-error Fix me later
@@ -283,7 +301,7 @@ class Selection {
       end: { node: nativeRange.endContainer, offset: nativeRange.endOffset },
       native: nativeRange,
     };
-    [range.start, range.end].forEach(position => {
+    [range.start, range.end].forEach((position) => {
       let { node, offset } = position;
       while (!(node instanceof Text) && node.childNodes.length > 0) {
         if (node.childNodes.length > offset) {
@@ -446,7 +464,7 @@ class Selection {
   }
 }
 
-function contains(parent, descendant) {
+function contains(parent: Node, descendant: Node) {
   try {
     // Firefox inserts inaccessible nodes around video elements
     descendant.parentNode; // eslint-disable-line @typescript-eslint/no-unused-expressions

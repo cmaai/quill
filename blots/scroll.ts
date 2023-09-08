@@ -1,16 +1,8 @@
-import {
-  Blot,
-  ContainerBlot,
-  EmbedBlot,
-  LeafBlot,
-  Parent,
-  ParentBlot,
-  Registry,
-  Scope,
-  ScrollBlot,
-} from 'parchment';
+import { ContainerBlot, LeafBlot, Scope, ScrollBlot } from 'parchment';
+import type { Blot, Parent, EmbedBlot, ParentBlot, Registry } from 'parchment';
 import Delta, { AttributeMap, Op } from 'quill-delta';
-import Emitter, { EmitterSource } from '../core/emitter';
+import Emitter from '../core/emitter';
+import type { EmitterSource } from '../core/emitter';
 import Block, { BlockEmbed } from './block';
 import Break from './break';
 import Container from './container';
@@ -57,7 +49,7 @@ class Scroll extends ScrollBlot {
     this.batch = false;
     this.optimize();
     this.enable();
-    this.domNode.addEventListener('dragstart', e => this.handleDragStart(e));
+    this.domNode.addEventListener('dragstart', (e) => this.handleDragStart(e));
   }
 
   batchStart() {
@@ -73,19 +65,19 @@ class Scroll extends ScrollBlot {
     this.update(mutations);
   }
 
-  emitMount(blot) {
+  emitMount(blot: Blot) {
     this.emitter.emit(Emitter.events.SCROLL_BLOT_MOUNT, blot);
   }
 
-  emitUnmount(blot) {
+  emitUnmount(blot: Blot) {
     this.emitter.emit(Emitter.events.SCROLL_BLOT_UNMOUNT, blot);
   }
 
-  emitEmbedUpdate(blot, change) {
+  emitEmbedUpdate(blot: Blot, change: unknown) {
     this.emitter.emit(Emitter.events.SCROLL_EMBED_UPDATE, blot, change);
   }
 
-  deleteAt(index, length) {
+  deleteAt(index: number, length: number) {
     const [first, offset] = this.line(index);
     const [last] = this.line(index + length);
     super.deleteAt(index, length);
@@ -108,13 +100,9 @@ class Scroll extends ScrollBlot {
     this.domNode.setAttribute('contenteditable', enabled ? 'true' : 'false');
   }
 
-  formatAt(index, length, format, value) {
+  formatAt(index: number, length: number, format: string, value: unknown) {
     super.formatAt(index, length, format, value);
     this.optimize();
-  }
-
-  handleDragStart(event) {
-    event.preventDefault();
   }
 
   insertAt(index: number, value: string, def?: unknown) {
@@ -177,7 +165,7 @@ class Scroll extends ScrollBlot {
 
       const formats = bubbleFormats(this.line(index)[0]);
       const attributes = AttributeMap.diff(formats, first.attributes) || {};
-      Object.keys(attributes).forEach(name => {
+      Object.keys(attributes).forEach((name) => {
         this.formatAt(lineEndIndex - 1, 1, name, attributes[name]);
       });
 
@@ -191,7 +179,7 @@ class Scroll extends ScrollBlot {
         refBlotOffset = 0;
       }
 
-      renderBlocks.forEach(renderBlock => {
+      renderBlocks.forEach((renderBlock) => {
         if (renderBlock.type === 'block') {
           const block = this.createBlock(
             renderBlock.attributes,
@@ -204,7 +192,7 @@ class Scroll extends ScrollBlot {
             renderBlock.value,
           ) as EmbedBlot;
           this.insertBefore(blockEmbed, refBlot || undefined);
-          Object.keys(renderBlock.attributes).forEach(name => {
+          Object.keys(renderBlock.attributes).forEach((name) => {
             blockEmbed.format(name, renderBlock.attributes[name]);
           });
         }
@@ -322,22 +310,26 @@ class Scroll extends ScrollBlot {
   updateEmbedAt(index: number, key: string, change: unknown) {
     // Currently it only supports top-level embeds (BlockEmbed).
     // We can update `ParentBlot` in parchment to support inline embeds.
-    const [blot] = this.descendant(b => b instanceof BlockEmbed, index);
+    const [blot] = this.descendant((b: Blot) => b instanceof BlockEmbed, index);
     if (blot && blot.statics.blotName === key && isUpdatable(blot)) {
       blot.updateContent(change);
     }
+  }
+
+  protected handleDragStart(event: DragEvent) {
+    event.preventDefault();
   }
 
   private deltaToRenderBlocks(delta: Delta) {
     const renderBlocks: RenderBlock[] = [];
 
     let currentBlockDelta = new Delta();
-    delta.forEach(op => {
+    delta.forEach((op) => {
       const insert = op?.insert;
       if (!insert) return;
       if (typeof insert === 'string') {
         const splitted = insert.split('\n');
-        splitted.slice(0, -1).forEach(text => {
+        splitted.slice(0, -1).forEach((text) => {
           currentBlockDelta.insert(text, op.attributes);
           renderBlocks.push({
             type: 'block',
@@ -441,7 +433,7 @@ function insertInlineContents(
         }
       }
     }
-    Object.keys(attributes).forEach(key => {
+    Object.keys(attributes).forEach((key) => {
       parent.formatAt(index, length, key, attributes[key]);
     });
     return index + length;

@@ -1,6 +1,8 @@
-import { EmbedBlot, Parent, Scope, ScrollBlot } from 'parchment';
-import Selection from '../core/selection';
+import { EmbedBlot, Scope } from 'parchment';
+import type { Parent, ScrollBlot } from 'parchment';
+import type Selection from '../core/selection';
 import TextBlot from './text';
+import type { EmbedContextRange } from './embed';
 
 class Cursor extends EmbedBlot {
   static blotName = 'cursor';
@@ -16,7 +18,7 @@ class Cursor extends EmbedBlot {
   textNode: Text;
   savedLength: number;
 
-  constructor(scroll: ScrollBlot, domNode, selection: Selection) {
+  constructor(scroll: ScrollBlot, domNode: HTMLElement, selection: Selection) {
     super(scroll, domNode);
     this.selection = selection;
     this.textNode = document.createTextNode(Cursor.CONTENTS);
@@ -29,7 +31,7 @@ class Cursor extends EmbedBlot {
     if (this.parent != null) this.parent.removeChild(this);
   }
 
-  format(name, value) {
+  format(name: string, value: unknown) {
     if (this.savedLength !== 0) {
       super.format(name, value);
       return;
@@ -51,7 +53,7 @@ class Cursor extends EmbedBlot {
     }
   }
 
-  index(node, offset) {
+  index(node: Node, offset: number) {
     if (node === this.textNode) return 0;
     return super.index(node, offset);
   }
@@ -70,7 +72,7 @@ class Cursor extends EmbedBlot {
     this.parent = null;
   }
 
-  restore() {
+  restore(): EmbedContextRange | null {
     if (this.selection.composing || this.parent == null) return null;
     const range = this.selection.getNativeRange();
     // Browser may push down styles/nodes inside the cursor blot.
@@ -121,7 +123,7 @@ class Cursor extends EmbedBlot {
     this.remove();
     if (range) {
       // calculate selection to restore
-      const remapOffset = (node, offset) => {
+      const remapOffset = (node: Node, offset: number) => {
         if (prevTextBlot && node === prevTextBlot.domNode) {
           return offset;
         }
@@ -148,9 +150,9 @@ class Cursor extends EmbedBlot {
     return null;
   }
 
-  update(mutations, context) {
+  update(mutations: MutationRecord[], context: Record<string, unknown>) {
     if (
-      mutations.some(mutation => {
+      mutations.some((mutation) => {
         return (
           mutation.type === 'characterData' && mutation.target === this.textNode
         );

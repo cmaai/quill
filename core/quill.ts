@@ -1,22 +1,30 @@
 import cloneDeep from 'lodash.clonedeep';
 import merge from 'lodash.merge';
 import * as Parchment from 'parchment';
-import Delta, { Op } from 'quill-delta';
-import Block, { BlockEmbed } from '../blots/block';
-import Scroll, { ScrollConstructor } from '../blots/scroll';
-import Clipboard from '../modules/clipboard';
-import History from '../modules/history';
-import Keyboard from '../modules/keyboard';
-import Uploader from '../modules/uploader';
+import type { Op } from 'quill-delta';
+import Delta from 'quill-delta';
+import type { BlockEmbed } from '../blots/block';
+import type Block from '../blots/block';
+import type Scroll from '../blots/scroll';
+import type { ScrollConstructor } from '../blots/scroll';
+import type Clipboard from '../modules/clipboard';
+import type History from '../modules/history';
+import type Keyboard from '../modules/keyboard';
+import type Uploader from '../modules/uploader';
 import Editor from './editor';
-import Emitter, { EmitterSource } from './emitter';
+import Emitter from './emitter';
+import type { EmitterSource } from './emitter';
 import instances from './instances';
-import logger, { DebugLevel } from './logger';
+import logger from './logger';
+import type { DebugLevel } from './logger';
 import Module from './module';
 import Selection, { Range } from './selection';
+import type { Bounds } from './selection';
 import Composition from './composition';
-import Theme, { ThemeConstructor } from './theme';
-import scrollRectIntoView, { Rect } from './utils/scrollRectIntoView';
+import Theme from './theme';
+import type { ThemeConstructor } from './theme';
+import scrollRectIntoView from './utils/scrollRectIntoView';
+import type { Rect } from './utils/scrollRectIntoView';
 
 const debug = logger('quill');
 
@@ -57,7 +65,7 @@ class Quill {
   // @ts-expect-error defined in webpack
   static version = typeof QUILL_VERSION === 'undefined' ? 'dev' : QUILL_VERSION;
 
-  static imports = {
+  static imports: Record<string, unknown> = {
     delta: Delta,
     parchment: Parchment,
     'core/module': Module,
@@ -76,6 +84,7 @@ class Quill {
   }
 
   static import(name: 'core/module'): typeof Module;
+  static import(name: `themes/${string}`): typeof Theme;
   static import(name: 'parchment'): typeof Parchment;
   static import(name: 'delta'): typeof Delta;
   static import(name: string): unknown;
@@ -102,7 +111,7 @@ class Quill {
         // @ts-expect-error
         this.register(`formats/${name}`, path, target);
       } else {
-        Object.keys(path).forEach(key => {
+        Object.keys(path).forEach((key) => {
           // @ts-expect-error
           this.register(key, path[key], target);
         });
@@ -178,7 +187,7 @@ class Quill {
     this.uploader = this.theme.addModule('uploader');
     this.theme.addModule('input');
     this.theme.init();
-    this.emitter.on(Emitter.events.EDITOR_CHANGE, type => {
+    this.emitter.on(Emitter.events.EDITOR_CHANGE, (type) => {
       if (type === Emitter.events.TEXT_CHANGE) {
         this.root.classList.toggle('ql-blank', this.editor.isBlank());
       }
@@ -325,22 +334,22 @@ class Quill {
     length: number,
     formats: Record<string, unknown>,
     source?: EmitterSource,
-  );
+  ): Delta;
   formatLine(
     index: number,
     length: number,
     name: string,
     value?: unknown,
     source?: EmitterSource,
-  );
+  ): Delta;
   formatLine(
     index: number,
     length: number,
     name: string | Record<string, unknown>,
     value?: unknown | EmitterSource,
     source?: EmitterSource,
-  ) {
-    let formats;
+  ): Delta {
+    let formats: Record<string, unknown>;
     // eslint-disable-next-line prefer-const
     [index, length, formats, source] = overload(
       index,
@@ -381,7 +390,7 @@ class Quill {
     value?: unknown | EmitterSource,
     source?: EmitterSource,
   ): Delta {
-    let formats;
+    let formats: Record<string, unknown>;
     // eslint-disable-next-line prefer-const
     [index, length, formats, source] = overload(
       // @ts-expect-error
@@ -403,8 +412,8 @@ class Quill {
     );
   }
 
-  getBounds(index, length = 0) {
-    let bounds;
+  getBounds(index: number | Range, length = 0): Bounds | null {
+    let bounds: Bounds | null = null;
     if (typeof index === 'number') {
       bounds = this.selection.getBounds(index, length);
     } else {
@@ -427,12 +436,14 @@ class Quill {
     return this.editor.getContents(index, length);
   }
 
-  getFormat(index?: number, length?: number);
-  getFormat(range?: { index: number; length: number });
+  getFormat(index?: number, length?: number): { [format: string]: unknown };
+  getFormat(range?: { index: number; length: number }): {
+    [format: string]: unknown;
+  };
   getFormat(
     index: { index: number; length: number } | number = this.getSelection(true),
     length = 0,
-  ) {
+  ): { [format: string]: unknown } {
     if (typeof index === 'number') {
       return this.editor.getFormat(index, length);
     }
@@ -548,7 +559,7 @@ class Quill {
     value?: unknown,
     source?: EmitterSource,
   ): Delta {
-    let formats;
+    let formats: Record<string, unknown>;
     // eslint-disable-next-line prefer-const
     // @ts-expect-error
     [index, , formats, source] = overload(index, 0, name, value, source);
@@ -567,26 +578,31 @@ class Quill {
     return this.scroll.isEnabled();
   }
 
-  off(...args: Parameters<typeof Emitter['prototype']['off']>) {
+  off(...args: Parameters<(typeof Emitter)['prototype']['off']>) {
     return this.emitter.off(...args);
   }
 
   on(
-    event: typeof Emitter['events']['TEXT_CHANGE'],
+    event: (typeof Emitter)['events']['TEXT_CHANGE'],
     handler: (delta: Delta, oldContent: Delta, source: EmitterSource) => void,
   ): Emitter;
   on(
-    event: typeof Emitter['events']['SELECTION_CHANGE'],
+    event: (typeof Emitter)['events']['SELECTION_CHANGE'],
     handler: (range: Range, oldRange: Range, source: EmitterSource) => void,
   ): Emitter;
   // @ts-expect-error
   on(
-    event: typeof Emitter['events']['EDITOR_CHANGE'],
+    event: (typeof Emitter)['events']['EDITOR_CHANGE'],
     handler: (
       ...args:
-        | [typeof Emitter['events']['TEXT_CHANGE'], Delta, Delta, EmitterSource]
         | [
-            typeof Emitter['events']['SELECTION_CHANGE'],
+            (typeof Emitter)['events']['TEXT_CHANGE'],
+            Delta,
+            Delta,
+            EmitterSource,
+          ]
+        | [
+            (typeof Emitter)['events']['SELECTION_CHANGE'],
             Range,
             Range,
             EmitterSource,
@@ -594,11 +610,11 @@ class Quill {
     ) => void,
   ): Emitter;
   on(event: string, ...args: unknown[]): Emitter;
-  on(...args: Parameters<typeof Emitter['prototype']['on']>): Emitter {
+  on(...args: Parameters<(typeof Emitter)['prototype']['on']>): Emitter {
     return this.emitter.on(...args);
   }
 
-  once(...args: Parameters<typeof Emitter['prototype']['once']>) {
+  once(...args: Parameters<(typeof Emitter)['prototype']['once']>) {
     return this.emitter.once(...args);
   }
 
@@ -713,7 +729,8 @@ function expandConfig(
   container: HTMLElement | string,
   userConfig: Options,
 ): ExpandedOptions {
-  let expandedConfig = merge(
+  // @ts-expect-error -- TODO fix this later
+  let expandedConfig: ExpandedOptions = merge(
     {
       container,
       modules: {
@@ -725,6 +742,8 @@ function expandConfig(
     },
     userConfig,
   );
+
+  // @ts-expect-error -- TODO fix this later
   if (!expandedConfig.theme || expandedConfig.theme === Quill.DEFAULTS.theme) {
     expandedConfig.theme = Theme;
   } else {
@@ -735,10 +754,11 @@ function expandConfig(
       );
     }
   }
+  // @ts-expect-error -- TODO fix this later
   const themeConfig = cloneDeep(expandedConfig.theme.DEFAULTS);
-  [themeConfig, expandedConfig].forEach(config => {
+  [themeConfig, expandedConfig].forEach((config) => {
     config.modules = config.modules || {};
-    Object.keys(config.modules).forEach(module => {
+    Object.keys(config.modules).forEach((module) => {
       if (config.modules[module] === true) {
         config.modules[module] = {};
       }
@@ -776,13 +796,15 @@ function expandConfig(
     themeConfig,
     expandedConfig,
   );
-  ['bounds', 'container'].forEach(key => {
-    if (typeof expandedConfig[key] === 'string') {
-      expandedConfig[key] = document.querySelector(expandedConfig[key]);
+  (['bounds', 'container'] as const).forEach((key) => {
+    const selector = expandedConfig[key];
+    if (typeof selector === 'string') {
+      // @ts-expect-error Handle null case
+      expandedConfig[key] = document.querySelector(selector) as HTMLElement;
     }
   });
   expandedConfig.modules = Object.keys(expandedConfig.modules).reduce(
-    (config, name) => {
+    (config: Record<string, unknown>, name) => {
       if (expandedConfig.modules[name]) {
         config[name] = expandedConfig.modules[name];
       }
@@ -795,7 +817,12 @@ function expandConfig(
 
 // Handle selection preservation and TEXT_CHANGE emission
 // common to modification APIs
-function modify(modifier, source, index, shift) {
+function modify(
+  modifier: () => Delta,
+  source: EmitterSource,
+  index: number | boolean,
+  shift: number | null,
+) {
   if (
     !this.isEnabled() &&
     source === Emitter.sources.USER &&
@@ -813,6 +840,7 @@ function modify(modifier, source, index, shift) {
     if (shift == null) {
       range = shiftRange(range, change, source);
     } else if (shift !== 0) {
+      // @ts-expect-error index should always be number
       range = shiftRange(range, index, shift, source);
     }
     this.setSelection(range, Emitter.sources.SILENT);
@@ -871,7 +899,7 @@ function overload(
   value?: unknown | EmitterSource,
   source?: EmitterSource,
 ): NormalizedIndexLength {
-  let formats = {};
+  let formats: Record<string, unknown> = {};
   // @ts-expect-error
   if (typeof index.index === 'number' && typeof index.length === 'number') {
     // Allow for throwaway end (used by insertText/insertEmbed)
@@ -917,21 +945,38 @@ function overload(
   return [index, length, formats, source];
 }
 
-function shiftRange(range, index, length, source?: EmitterSource) {
+function shiftRange(range: Range, change: Delta, source?: EmitterSource): Range;
+function shiftRange(
+  range: Range,
+  index: number,
+  length?: number,
+  source?: EmitterSource,
+): Range;
+function shiftRange(
+  range: Range,
+  index: number | Delta,
+  lengthOrSource?: number | EmitterSource,
+  source?: EmitterSource,
+) {
+  const length = typeof lengthOrSource === 'number' ? lengthOrSource : 0;
   if (range == null) return null;
   let start;
   let end;
+  // @ts-expect-error -- TODO: add a better type guard around `index`
   if (index && typeof index.transformPosition === 'function') {
-    [start, end] = [range.index, range.index + range.length].map(pos =>
+    [start, end] = [range.index, range.index + range.length].map((pos) =>
+      // @ts-expect-error -- TODO: add a better type guard around `index`
       index.transformPosition(pos, source !== Emitter.sources.USER),
     );
   } else {
-    [start, end] = [range.index, range.index + range.length].map(pos => {
+    [start, end] = [range.index, range.index + range.length].map((pos) => {
+      // @ts-expect-error -- TODO: add a better type guard around `index`
       if (pos < index || (pos === index && source === Emitter.sources.USER))
         return pos;
       if (length >= 0) {
         return pos + length;
       }
+      // @ts-expect-error -- TODO: add a better type guard around `index`
       return Math.max(index, pos + length);
     });
   }

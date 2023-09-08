@@ -1,4 +1,5 @@
-import Delta, { AttributeMap, Op } from 'quill-delta';
+import type { Op } from 'quill-delta';
+import Delta, { AttributeMap } from 'quill-delta';
 import { choose, randomInt, runFuzz } from './__helpers__/utils';
 import { AlignClass } from '../../formats/align';
 import { FontClass } from '../../formats/font';
@@ -150,7 +151,7 @@ const generateChange = (
   doc: Delta,
   changeCount: number,
   allowedActions = ['insert', 'delete', 'retain'],
-) => {
+): Delta => {
   const docLength = doc.length();
   const skipLength = allowedActions.includes('retain')
     ? randomInt(docLength)

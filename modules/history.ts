@@ -1,9 +1,9 @@
 import { Scope } from 'parchment';
-import Delta from 'quill-delta';
+import type Delta from 'quill-delta';
 import Module from '../core/module';
 import Quill from '../core/quill';
 import type Scroll from '../blots/scroll';
-import { Range } from '../core/selection';
+import type { Range } from '../core/selection';
 
 export interface HistoryOptions {
   userOnly: boolean;
@@ -67,7 +67,7 @@ class History extends Module<HistoryOptions> {
       );
     }
 
-    this.quill.root.addEventListener('beforeinput', event => {
+    this.quill.root.addEventListener('beforeinput', (event) => {
       if (event.inputType === 'historyUndo') {
         this.undo();
         event.preventDefault();
@@ -181,7 +181,7 @@ function endsWithNewlineChange(scroll: Scroll, delta: Delta) {
     return typeof lastOp.insert === 'string' && lastOp.insert.endsWith('\n');
   }
   if (lastOp.attributes != null) {
-    return Object.keys(lastOp.attributes).some(attr => {
+    return Object.keys(lastOp.attributes).some((attr) => {
       return scroll.query(attr, Scope.BLOCK) != null;
     });
   }

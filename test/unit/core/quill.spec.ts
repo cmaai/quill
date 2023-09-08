@@ -1,13 +1,7 @@
 import '../../../quill';
 import Delta from 'quill-delta';
-import {
-  MockedFunction,
-  beforeEach,
-  describe,
-  expect,
-  test,
-  vitest,
-} from 'vitest';
+import { beforeEach, describe, expect, test, vitest } from 'vitest';
+import type { MockedFunction } from 'vitest';
 import Emitter from '../../../core/emitter';
 import Theme from '../../../core/theme';
 import Toolbar from '../../../modules/toolbar';
@@ -25,7 +19,7 @@ const createContainer = (html: string | { html: string } = '') => {
 
 describe('Quill', () => {
   test('imports', () => {
-    Object.keys(Quill.imports).forEach(path => {
+    Object.keys(Quill.imports).forEach((path) => {
       expect(Quill.import(path)).toBeTruthy();
     });
   });
@@ -278,7 +272,7 @@ describe('Quill', () => {
       (quill.root.firstChild?.firstChild as Text).data = '01!23';
       const delta = new Delta().retain(2).insert('!');
 
-      await new Promise(r => setTimeout(r, 1));
+      await new Promise((r) => setTimeout(r, 1));
       expect(quill.emitter.emit).toHaveBeenCalledWith(
         Emitter.events.TEXT_CHANGE,
         delta,
@@ -313,7 +307,7 @@ describe('Quill', () => {
             newSelection.index + newSelection.length,
           );
         }
-        await new Promise(r => setTimeout(r, 1));
+        await new Promise((r) => setTimeout(r, 1));
         const calls = (
           quill.emitter.emit as MockedFunction<typeof quill.emitter.emit>
         ).mock.calls;
@@ -611,8 +605,7 @@ describe('Quill', () => {
         expect(config.theme).toEqual(Snow);
         // @ts-expect-error
         expect(config.modules.toolbar.handlers.image).toEqual(
-          // @ts-expect-error
-          Snow.DEFAULTS.modules.toolbar.handlers.image,
+          Snow.DEFAULTS.modules.toolbar?.handlers?.image,
         );
       });
 
@@ -644,7 +637,6 @@ describe('Quill', () => {
       const oldTheme = Theme.DEFAULTS.modules;
       const oldToolbar = Toolbar.DEFAULTS;
       Toolbar.DEFAULTS = {
-        // @ts-expect-error
         option: 2,
         module: true,
       };
@@ -1006,8 +998,8 @@ describe('Quill', () => {
         .join(separator);
 
     const viewportRatio = (element: Element): Promise<number> => {
-      return new Promise(resolve => {
-        const observer = new IntersectionObserver(entries => {
+      return new Promise((resolve) => {
+        const observer = new IntersectionObserver((entries) => {
           resolve(entries[0].intersectionRatio);
           observer.disconnect();
         });

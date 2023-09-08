@@ -17,14 +17,13 @@ class Table extends Module {
     Quill.register(TableContainer);
   }
 
-  constructor(...args) {
-    // @ts-expect-error
+  constructor(...args: ConstructorParameters<typeof Module>) {
     super(...args);
     this.listenBalanceCells();
   }
 
   balanceTables() {
-    this.quill.scroll.descendants(TableContainer).forEach(table => {
+    this.quill.scroll.descendants(TableContainer).forEach((table) => {
       table.balanceCells();
     });
   }
@@ -126,7 +125,7 @@ class Table extends Module {
   insertTable(rows: number, columns: number) {
     const range = this.quill.getSelection();
     if (range == null) return;
-    const delta = new Array(rows).fill(0).reduce(memo => {
+    const delta = new Array(rows).fill(0).reduce((memo) => {
       const text = new Array(columns).fill('\n').join('');
       return memo.insert(text, { table: tableId() });
     }, new Delta().retain(range.index));
@@ -136,18 +135,25 @@ class Table extends Module {
   }
 
   listenBalanceCells() {
-    this.quill.on(Quill.events.SCROLL_OPTIMIZE, mutations => {
-      mutations.some(mutation => {
-        if (['TD', 'TR', 'TBODY', 'TABLE'].includes(mutation.target.tagName)) {
-          this.quill.once(Quill.events.TEXT_CHANGE, (delta, old, source) => {
-            if (source !== Quill.sources.USER) return;
-            this.balanceTables();
-          });
-          return true;
-        }
-        return false;
-      });
-    });
+    this.quill.on(
+      Quill.events.SCROLL_OPTIMIZE,
+      (mutations: MutationRecord[]) => {
+        mutations.some((mutation) => {
+          if (
+            ['TD', 'TR', 'TBODY', 'TABLE'].includes(
+              (mutation.target as HTMLElement).tagName,
+            )
+          ) {
+            this.quill.once(Quill.events.TEXT_CHANGE, (delta, old, source) => {
+              if (source !== Quill.sources.USER) return;
+              this.balanceTables();
+            });
+            return true;
+          }
+          return false;
+        });
+      },
+    );
   }
 }
 
