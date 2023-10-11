@@ -98,7 +98,6 @@
 .ql-editor li {
   list-style-type: none;
   padding-left: 1.5em;
-  position: relative;
 }
 .ql-editor li > .ql-ui:before {
   display: inline-block;
@@ -485,6 +484,9 @@
 }
 .ql-editor .ql-ui {
   position: absolute;
+}
+.ql-editor li > .ql-ui {
+  position: static;
 }
 .ql-editor.ql-blank::before {
   color: rgba(0,0,0,0.6);
