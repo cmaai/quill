@@ -71,7 +71,6 @@ resets(arr)
   li
     list-style-type: none
     padding-left: LIST_STYLE_OUTER_WIDTH
-    position: relative
 
     > .ql-ui:before
       display: inline-block
@@ -210,6 +209,10 @@ resets(arr)
 
   .ql-ui
     position: absolute
+
+  li
+    > .ql-ui
+      position: static;
 
 .ql-editor.ql-blank::before
   color: rgba(0,0,0,0.6)
