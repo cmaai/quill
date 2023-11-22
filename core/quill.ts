@@ -1,5 +1,4 @@
-import cloneDeep from 'lodash.clonedeep';
-import merge from 'lodash.merge';
+import { cloneDeep, merge } from 'lodash-es';
 import * as Parchment from 'parchment';
 import type { Op } from 'quill-delta';
 import Delta from 'quill-delta';
@@ -186,6 +185,7 @@ class Quill {
     this.history = this.theme.addModule('history');
     this.uploader = this.theme.addModule('uploader');
     this.theme.addModule('input');
+    this.theme.addModule('uiNode');
     this.theme.init();
     this.emitter.on(Emitter.events.EDITOR_CHANGE, (type) => {
       if (type === Emitter.events.TEXT_CHANGE) {
