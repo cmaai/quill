@@ -1,5 +1,5 @@
 /*!
- * Quill Editor v2.0.0-dev.4.1
+ * Quill Editor v2.0.0-dev.4.1.1
  * https://quilljs.com/
  * Copyright (c) 2014, Jason Chen
  * Copyright (c) 2013, salesforce.com
@@ -98,6 +98,7 @@
 .ql-editor li {
   list-style-type: none;
   padding-left: 1.5em;
+  position: relative;
 }
 .ql-editor li > .ql-ui:before {
   display: inline-block;
@@ -106,12 +107,6 @@
   text-align: right;
   white-space: nowrap;
   width: 1.2em;
-}
-@supports (display: contents) {
-  .ql-editor li[data-list=bullet] > .ql-ui,
-  .ql-editor li[data-list=ordered] > .ql-ui {
-    display: contents;
-  }
 }
 .ql-editor li[data-list=checked] > .ql-ui,
 .ql-editor li[data-list=unchecked] > .ql-ui {
@@ -484,9 +479,6 @@
 }
 .ql-editor .ql-ui {
   position: absolute;
-}
-.ql-editor li > .ql-ui {
-  position: static;
 }
 .ql-editor.ql-blank::before {
   color: rgba(0,0,0,0.6);
